@@ -6,8 +6,7 @@ import java.util.*;
 
 
 public class demo {
-    CSVUtil csvUtil = new CSVUtil();
-    Map<String,Map<String, Map<String,String>>> tagMap;
+    Map<String,Map<String, Map<String,String>>> tagMap;//标签映射表
 
     String resourcesPath="./resources";
 
@@ -27,29 +26,19 @@ public class demo {
 
 
     public void processOne() throws IOException {
-        //        BufferedReader csvReader = new BufferedReader(new FileReader("./sample.csv"));
-//        String s;
-//        while ((s = csvReader.readLine()) != null){
-//            System.out.println(s);
-//        }
-//        CSVReader csvReader = new CSVReader(new FileReader("./sample.csv", StandardCharsets.UTF_8));
-        System.out.println("=============================");
-//        CSVReader csvReader = new CSVReader(new InputStreamReader(new FileInputStream("./sample.csv"), Charset.forName("GBK")));
-
+        //设置表头
         List<String[]> context2 = new ArrayList<>(){{
             add(new String[]{"task_id", "storeId","storeName"});
         }};
 
-
-//        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("./sample.csv"), Charset.forName("GBK")));
-//        BufferedReader reader = new BufferedReader(new FileReader("./sample.csv"));
+        //创建输入输出流
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(resourcesPath+"/sample.csv"), StandardCharsets.UTF_8));
-
         BufferedWriter writer = new BufferedWriter(new FileWriter(resourcesPath+"/newSample.csv"));
-//        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("./newSample1.csv"),"UTF-8"));
 
-        List<List<String>> context = csvUtil.CSVToListString(reader);
+        //读取原始文件
+        List<List<String>> context = CSVUtil.CSVToListString(reader);
 
+        //解析文件
         for (int i = 1; i < context.size(); i++) {
             List<String> line = context.get(i);
             String data = line.get(4);
@@ -57,46 +46,47 @@ public class demo {
             context2.add(
                     new String[]{
                             line.get(1),
-                            csvUtil.getValueFromJson(data, "storeId"),
-                            csvUtil.getValueFromJson(data, "storeName")
+                            CSVUtil.getValueFromJson(data, "storeId"),
+                            CSVUtil.getValueFromJson(data, "storeName")
                     });
         }
 
-        csvUtil.ListToCSV(context2,writer);
+        //将解析完成的数据保存到磁盘
+        CSVUtil.ListToCSV(context2,writer);
 
+        //关闭流
         reader.close();
         writer.close();
     }
 
     public void processTwo() throws IOException {
+        //创建输入流
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(resourcesPath+"/标签词库1026.csv")));
 
-        List<List<String>> context = csvUtil.CSVToListString(reader);
-
+        //将词库信息读取到内存
+        List<List<String>> context = CSVUtil.CSVToListString(reader);
         tagMap = new HashMap<>();
-
-
+        //解析到映射表
         for (int i = 1; i < context.size(); i++) {
-            csvUtil.MapBuilderMapMapMap(tagMap,context.get(i),context.get(i).get(4));
+            CSVUtil.MapBuilderMapMapMap(tagMap,context.get(i),context.get(i).get(4));
         }
 
-//        tagMap.forEach(
-//                (s, stringMapMap) ->
-//                        stringMapMap.forEach(
-//                                (s1, stringStringMap) ->
-//                                        stringStringMap.forEach((s2, s3) ->
-//                                                System.out.println(s+"  "+s1+"   "+s2+"   "+s3)
-//                                        )
-//                        )
-//        );
+        //关闭流
         reader.close();
     }
 
     private void processThree() throws IOException {
+        //创建输入输出流
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(resourcesPath+"/newSample.csv")));
         BufferedWriter writer = new BufferedWriter(new FileWriter(resourcesPath+"/result.csv"));
-        List<List<String>> context = csvUtil.CSVToListString(reader);
+
+        //加解析好的Sample数据加载到内存中
+        List<List<String>> context = CSVUtil.CSVToListString(reader);
+
+        //添加tag表头
         context.get(0).add(3,"tag");
+
+        //为sample数据匹配标签
         for (int i = 1; i < context.size(); i++) {
             String storeName = context.get(i).get(2);
             for (String key1 : tagMap.keySet()) {
@@ -117,8 +107,9 @@ public class demo {
                 }
             }
         }
-
-        csvUtil.StringListToCSV(context,writer);
+        //写入磁盘
+        CSVUtil.StringListToCSV(context,writer);
+        //关闭流
         reader.close();
         writer.close();
     }
