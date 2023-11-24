@@ -1,14 +1,15 @@
 import util.CSVUtil;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.*;
 
 
 public class demo {
     Map<String,Map<String, Map<String,String>>> tagMap;//标签映射表
 
-    String resourcesPath="./resources";
+    String resourcesPath="./resources";//资源路径
 
     public static void main(String[] args) throws IOException{
 
@@ -27,19 +28,15 @@ public class demo {
 
     public void processOne() throws IOException {
         //设置表头
-        List<String[]> context2 = new ArrayList<>(){{
-            add(new String[]{"task_id", "storeId","storeName"});
+        List<List<String>> context2 = new ArrayList<>(){{
+            add(Arrays.asList("task_id", "storeId","storeName"));
         }};
 
         //用了storeName去重
         Set<String> storeNameSet = new HashSet<>();
 
-        //创建输入输出流
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(resourcesPath+"/sample.csv"), StandardCharsets.UTF_8));
-        BufferedWriter writer = new BufferedWriter(new FileWriter(resourcesPath+"/newSample.csv"));
-
         //读取原始文件
-        List<List<String>> context = CSVUtil.CSVToListString(reader);
+        List<List<String>> context = CSVUtil.CSVToListStringByStream(Path.of(resourcesPath+"/sample.csv"));
 
         //解析文件
         List<String> line;
@@ -50,45 +47,35 @@ public class demo {
             storeName = CSVUtil.getValueFromJson(data, "storeName");
             if(storeNameSet.contains(storeName))continue;//如果这个storeName已经添加过了 就不添加了
             context2.add(
-                    new String[]{
+                    Arrays.asList(
                             line.get(1),
                             CSVUtil.getValueFromJson(data, "storeId"),
                             storeName
-                    });
+                    )
+                 );
             storeNameSet.add(storeName);
         }
 
-        //将解析完成的数据保存到磁盘
-        CSVUtil.ListToCSV(context2,writer);
+        CSVUtil.StringListToCSVByStream(context2,Path.of(resourcesPath+"/newSample.csv"));
 
-        //关闭流
-        reader.close();
-        writer.close();
     }
 
-    public void processTwo() throws IOException {
-        //创建输入流
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(resourcesPath+"/标签词库1026.csv")));
-
+    public void processTwo(){
         //将词库信息读取到内存
-        List<List<String>> context = CSVUtil.CSVToListString(reader);
+        List<List<String>> context = CSVUtil.CSVToListStringByStream(Path.of(resourcesPath+"/标签词库1026.csv"), Charset.forName("GBK"));//词库表是UTF-8编码，这里需要设置一下编码格式
         tagMap = new HashMap<>();
+
         //解析到映射表
         for (int i = 1; i < context.size(); i++) {
             CSVUtil.MapBuilderMapMapMap(tagMap,context.get(i),context.get(i).get(4));
         }
 
-        //关闭流
-        reader.close();
     }
 
     private void processThree() throws IOException {
-        //创建输入输出流
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(resourcesPath+"/newSample.csv")));
-        BufferedWriter writer = new BufferedWriter(new FileWriter(resourcesPath+"/result.csv"));
 
         //加解析好的Sample数据加载到内存中
-        List<List<String>> context = CSVUtil.CSVToListString(reader);
+        List<List<String>> context = CSVUtil.CSVToListStringByStream(Path.of(resourcesPath+"/newSample.csv"));
 
         //添加tag表头
         context.get(0).add(3,"tag");
@@ -99,16 +86,12 @@ public class demo {
             storeName = context.get(i).get(2);
             List<String> keys1 = matchKey(tagMap.keySet(), storeName);//获取符合关键字1的 keys
             if (keys1.isEmpty()) continue;//没有符合的关键字
-            String tag = matchTag(keys1, storeName);
-            if (tag != null) context.get(i).add(3,tag);//获取标签并添加标签
+            context.get(i).add(3,matchTag(keys1, storeName));//获取标签并添加标签
         }
 
-
         //写入磁盘
-        CSVUtil.StringListToCSV(context,writer);
-        //关闭流
-        reader.close();
-        writer.close();
+        CSVUtil.StringListToCSVByStream(context,Path.of(resourcesPath+"/result.csv"));
+
     }
 
     /**
@@ -148,6 +131,6 @@ public class demo {
             }
         }
         if(tagMap.get(keys[0]).get(keys[1])!=null) return tagMap.get(keys[0]).get(keys[1]).get(keys[2]);//前两个关键字都匹配到了
-        return null;//如果关键字2没有匹配上,并且在tagMap中不存在,说明没有符合条件的标签；
+        return "";//如果关键字2没有匹配上,并且在tagMap中不存在,说明没有符合条件的标签；
     }
 }

@@ -1,19 +1,58 @@
 package util;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 public class CSVUtil {
+    private static boolean isParallel=true;//全局的并行流控制
+    private static final Charset defaultEncoding=StandardCharsets.UTF_8;
 
-    public static List<List<String>> CSVToListString(BufferedReader reader) throws IOException {
-        List<List<String>> lines = new ArrayList<>();
-        String s;
-        StringBuilder sb = new StringBuilder();
-        int index=0;
-        while ((s = reader.readLine())!=null){
-            List<String> line = new ArrayList<>();
+    public static void setIsParallel(boolean isParallel) {
+        CSVUtil.isParallel = isParallel;
+    }
+
+    public static List<List<String>> CSVToListStringByStream(Path path){
+        return CSVToListStringByStream(path,isParallel);
+    }
+
+    public static List<List<String>> CSVToListStringByStream(Path path,boolean isParallel){
+        return CSVToListStringByStream(path, defaultEncoding,isParallel);
+    }
+
+    public static List<List<String>> CSVToListStringByStream(Path path, Charset charset){
+        return CSVToListStringByStream(path,charset,isParallel);
+    }
+
+    public static List<List<String>> CSVToListStringByStream(Path path, Charset charset,boolean isParallel){
+        Stream<String> lines;
+        try {
+            lines = Files.lines(path,charset).skip(1);
+            String firstLine = getFirstLine(path,charset);//获取表头
+            if (isParallel) lines = lines.parallel();
+            return CSVStreamToListString(firstLine,lines);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getFirstLine(Path path,Charset charset) throws IOException {
+        return Files.newBufferedReader(path,charset).readLine();
+    }
+
+    private static List<List<String>> CSVStreamToListString(String firstLine,Stream<String> lines){
+        List<List<String>> context = new CopyOnWriteArrayList<>(){{
+            add(new CopyOnWriteArrayList<>(Arrays.asList(firstLine.split(","))));
+        }};
+        lines.forEach(s -> {
+            StringBuilder sb = new StringBuilder();
+            List<String> line = new CopyOnWriteArrayList<>();
+            int index=0;
             for (char c : s.toCharArray()) {
                 switch (c) {
                     case '{' -> index++;
@@ -29,47 +68,41 @@ public class CSVUtil {
                 sb.append(c);
             }
             if(index != 0) throw new RuntimeException("数据解析错误，Json数据不完整\n"+
-                    "来自 第"+lines.size()+"行\n"+
-                    "当前行的内容:"+line+"\n"+
-                    "上一行的内容:"+lines.get(lines.size()-1));
+                    "当前行的内容:"+line+"\n");
             line.add(sb.toString());
             sb.delete(0,sb.length());
-            lines.add(line);
-        }
-        return lines;
+            context.add(line);
+        });
+        return context;
     }
 
-    public static void ListToCSV(List<String[]> context, BufferedWriter writer) throws IOException {
-        for (String[] line : context) {
-            StringJoiner s = new StringJoiner(",");
-            for (String o : line) {
-                s.add(o);
-            }
-//            System.out.println(s);
-            writer.write(s.toString());
-            writer.newLine();
-        }
-        writer.flush();
+    public static void StringListToCSVByStream(List<List<String>> context,Path path) throws IOException{
+        StringListToCSVByStream(context,path,isParallel);
     }
 
-    public static void StringListToCSV(List<List<String>> context, BufferedWriter writer) throws IOException {
-        for (List<String> line : context) {
-            StringJoiner s = new StringJoiner(",");
-            for (String o : line) {
-                s.add(o);
-            }
-//            System.out.println(s);
-            writer.write(s.toString());
-            writer.newLine();
+    public static void StringListToCSVByStream(List<List<String>> context,Path path,boolean isParallel) throws IOException {
+        String s = String.join(",",context.get(0));//读取第一行表头
+        List<String> l = new ArrayList<>(){{
+            add(s);
+        }};
+        //是否以并行流来解析数据
+        if (isParallel){
+            l.addAll(
+                    context.stream().skip(1).parallel().map(line -> String.join(",", line)).toList()
+            );
+        }else{
+            l.addAll(
+                    context.stream().skip(1).map(line -> String.join(",", line)).toList()
+            );
         }
-        writer.flush();
+        Files.write(path, l);
     }
 
     public static String getValueFromJson(String json,String key){
-        int Index=json.indexOf(key);
-        if (Index != -1){
-            int start = json.indexOf(":", Index);
-            int end = json.indexOf(",", Index);
+        int index=json.indexOf(key);
+        if (index != -1){
+            int start = json.indexOf(":", index);
+            int end = json.indexOf(",", index);
             return json.substring(start+1,end);
         }
         return null;
