@@ -2,8 +2,8 @@
 <project version="4">
   <component name="Encoding" defaultCharsetForPropertiesFiles="UTF-8">
     <file url="file://$PROJECT_DIR$/CSVUtil.java" charset="GBK" />
-    <file url="file://$PROJECT_DIR$/resources/result.csv" charset="GBK" />
-    <file url="file://$PROJECT_DIR$/resources/标签词库1026.csv" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/origin/标签词库1026.csv" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/result.csv" charset="GBK" />
     <file url="PROJECT" charset="GBK" />
   </component>
 </project>
