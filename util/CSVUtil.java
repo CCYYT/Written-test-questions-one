@@ -35,7 +35,7 @@ public class CSVUtil {
             lines = Files.lines(path,charset).skip(1);
             String firstLine = getFirstLine(path,charset);//获取表头
             if (isParallel) lines = lines.parallel();
-            return CSVStreamToListString(firstLine,lines);
+            return CSVStreamToListString(firstLine,lines,isParallel);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -45,10 +45,18 @@ public class CSVUtil {
         return Files.newBufferedReader(path,charset).readLine();
     }
 
-    private static List<List<String>> CSVStreamToListString(String firstLine,Stream<String> lines){
-        List<List<String>> context = new CopyOnWriteArrayList<>(){{
-            add(new CopyOnWriteArrayList<>(Arrays.asList(firstLine.split(","))));
-        }};
+    private static List<List<String>> CSVStreamToListString(String firstLine,Stream<String> lines,boolean isParallel){
+        List<List<String>> context;
+        if(isParallel){
+            context = new CopyOnWriteArrayList<>(){{
+                add(new CopyOnWriteArrayList<>(Arrays.asList(firstLine.split(","))));
+            }};
+        }else {
+            context = new ArrayList<>(){{
+                add(new ArrayList<>(Arrays.asList(firstLine.split(","))));
+            }};
+        }
+
         lines.forEach(s -> {
             StringBuilder sb = new StringBuilder();
             List<String> line = new CopyOnWriteArrayList<>();
