@@ -10,7 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
 public class CSVUtil {
-    private static boolean isParallel=true;//全局的并行流控制
+    private static boolean isParallel=false;//全局的并行流控制  读取大文件时开启
     private static final Charset defaultEncoding=StandardCharsets.UTF_8;
 
     public static void setIsParallel(boolean isParallel) {
