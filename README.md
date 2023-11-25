@@ -13,5 +13,4 @@
 2.店铺解析不全      ：    使用正则循环匹配每一个data
 
 打标签 大致逻辑：
-![img.png](img.png)
 ![Image text](https://github.com/CCYYT/images/blob/main/Snipaste_2023-11-25_23-37-39.png)
