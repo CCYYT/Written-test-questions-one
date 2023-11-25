@@ -102,6 +102,8 @@ public class demo {
 
     private void processThree() throws IOException {
 
+        Stream<Map<String, Map<String, Map<String, String>>>> tagMap1 = Stream.of(tagMap);
+
 
         Stream<String> stream = Files.lines(Path.of(resourcesResultPath + "newSample.csv")).skip(1);//Ìø¹ý±íÍ·
         BufferedWriter writer = Files.newBufferedWriter(Path.of(resourcesResultPath + "result.csv"));
