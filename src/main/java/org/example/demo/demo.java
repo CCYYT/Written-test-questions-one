@@ -54,156 +54,38 @@ public class demo {
 
         //打开输入输出流
         Stream<String> stream = Files.lines(Path.of(resourcesOriginPath + "sample.csv")).skip(1);//跳过表头
-        BufferedWriter writer = Files.newBufferedWriter(Path.of(resourcesResultPath + "newSample1.csv"));
+        BufferedWriter writer = Files.newBufferedWriter(Path.of(resourcesResultPath + "newSample.csv"));
 
         //写入表头
         writer.write("\"task_id\",\"storeId\",\"storeName\"");
         writer.newLine();
         writer.flush();
 
-//        Pattern storeNamePattern = Pattern.compile("\"data\":\\{.*?\"storeName\":\"([^\"]+?)\"[,|\\}]");
-//        Pattern storeIdPattern = Pattern.compile("\"data\":\\{.*?\"storeId\":\"(\\w+?)\"[,|\\}]");
-//
-//        stream
-//                .map(CSVUtil::stringLineToList)
-//                .forEach(line ->{
-//                    String data = line.get(4);
-//                    Matcher storeNameMatcher = storeNamePattern.matcher(data);
-//                    Matcher storeIdMatcher = storeIdPattern.matcher(data);
-//                    try {
-//                        while (storeNameMatcher.find() && storeIdMatcher.find()){
-//                            String storeName = storeNameMatcher.group(1);
-//                            if(storeNameSet.contains(storeName))continue;
-//                            storeNameSet.add(storeName);
-//                            writer.write(line.get(1)+","+storeIdMatcher.group(1)+","+storeNameMatcher.group(1));
-//                            writer.newLine();
-//                        }
-//                        writer.flush();
-//                    } catch (IOException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                });
+        Pattern storeNamePattern = Pattern.compile("\"data\":\\{.*?\"storeName\":\"([^\"]+?)\"[,|}]");
+        Pattern storeIdPattern = Pattern.compile("\"data\":\\{.*?\"storeId\":\"(\\w+?)\"[,|}]");
 
-
-        //分割符
-        String delimiter = "\"data\":{";
-
-        //解析数据并写入
         stream
-            .map(CSVUtil::stringLineToList)//解析并校验原始数据的每一行
-            .forEach(line -> {
-                try {
-                    findAllStoreNameAndStoreId(line,delimiter,storeNameSet,writer);//查找StoreName和StoreId并写入文件
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+                .map(CSVUtil::stringLineToList)//解析行
+                .forEach(line ->{
+                    String data = line.get(4);
+                    Matcher storeNameMatcher = storeNamePattern.matcher(data);
+                    Matcher storeIdMatcher = storeIdPattern.matcher(data);
+                    try {
+                        while (storeNameMatcher.find() && storeIdMatcher.find()){
+                            String storeName = storeNameMatcher.group(1);
+                            if(storeNameSet.contains(storeName))continue;
+                            storeNameSet.add(storeName);
+                            writer.write(line.get(1)+","+storeIdMatcher.group(1)+","+storeNameMatcher.group(1));
+                            writer.newLine();
+                        }
+                        writer.flush();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
 
         //关闭流
         writer.close();
-    }
-
-
-    /**
-    * @Description: 解析data{...} 中的data[...]的storeName和storeId
-    * @Param: [line, delimiter, storeNameSet, writer]
-    * @return： void
-    * @Author: CCYT
-    * @Date: 2023/11/25
-    */
-    public void findAllStoreNameAndStoreId(List<String> line,String delimiter,Set<String> storeNameSet,BufferedWriter writer) throws IOException {
-        String data = line.get(4);
-        int start = data.indexOf(delimiter), index, end = 0;
-        if (start == -1) return;//没有这一行data数据，直接返回
-
-        StringBuilder newLine = new StringBuilder(line.get(1));
-
-        while (end != -1) {
-            //找到下一个data的起始下标
-            end = data.indexOf(delimiter, start + 1);
-
-            //end=-1说明 当前已经是最后一个data了
-            int i = end == -1 ? data.length() : end;
-
-
-            do{
-                //查找storeName   找到 “data[...]”中 第一个不为空的storeName
-                start = findIndex(data, "storeName", start+1, i);
-                if (start == -1)break;
-            }while ((data.indexOf(",", start) - data.indexOf(":", start) + 1)<=4);
-            if (start == -1) {
-                start = end;
-                continue;
-            }//没找到storeName
-            String storeName = data.substring(data.indexOf(":", start) + 1, data.indexOf(",", start));
-
-
-            if (storeNameSet.contains(storeName)) {
-                start = end;
-                continue;
-            }//如果这个storeName已经添加过了 就不添加了
-            storeNameSet.add(storeName);
-
-            //查找storeId   找到 “data[...]”中 最后一个storeId
-            index = findLastIndex(data, "storeId", start, i);
-            if (index == -1) {//没有找到storeId
-                newLine.append(",\"\",").append(storeName);
-            } else {
-                newLine.append(",")
-                        .append(
-                                data, data.indexOf(":", index) + 1, data.indexOf(",", index)
-                        )
-                        .append(",")
-                        .append(storeName);
-
-            }
-
-            //写入文件
-            writer.write(newLine.toString());
-            writer.newLine();
-
-            //清空当前行
-            newLine.delete(line.get(1).length(), newLine.length());
-
-            start = end;
-        }
-        writer.flush();
-
-    }
-
-    /**
-     * @Description:
-     * @Param: [data, key, start, end]
-     * @return： int  找到了返回 符合结果的下标；没找到返回-1
-     * @Author: CCYT
-     * @Date: 2023/11/25
-     */
-//    public int findLastIndex(String data,String key,int start,int end){  jdk21适用
-//        if (end<start || start == -1 || end == -1)return -1;
-//        int index = data.indexOf(key, start, end);
-//        if(index == -1)return -1;
-//        int newIndex = index;
-//        while ((index = data.indexOf(key, index, end))!=-1) {
-//            newIndex = index;
-//        }
-//        return newIndex;
-//    }
-    public int findLastIndex(String data, String key, int start, int end) {
-        if (end < start || start == -1 || end == -1) return -1;
-        int index = data.indexOf(key, start);
-        if (index == -1 || index > end) return -1;
-        int newIndex = index;
-        while ((index = data.indexOf(key, index + 1)) != -1 && index < end) {
-            newIndex = index;
-        }
-        return newIndex;
-    }
-
-    public int findIndex(String data, String key, int start, int end) {
-        if (end < start || start == -1 || end == -1) return -1;
-        int index = data.indexOf(key, start);
-        if (index == -1 || index > end) return -1;
-        return index;
     }
 
     public void processTwo() {
