@@ -57,9 +57,7 @@ public class demo {
         BufferedWriter writer = Files.newBufferedWriter(Path.of(resourcesResultPath + "newSample.csv"));
 
         //写入表头
-        writer.write("\"task_id\",\"storeId\",\"storeName\"");
-        writer.newLine();
-        writer.flush();
+        writer.write("\"task_id\",\"storeId\",\"storeName\"");writer.newLine();
 
         Pattern storeNamePattern = Pattern.compile("\"data\":\\{.*?\"storeName\":\"([^\"]+?)\"[,|}]");
         Pattern storeIdPattern = Pattern.compile("\"data\":\\{.*?\"storeId\":\"(\\w+?)\"[,|}]");
@@ -100,7 +98,7 @@ public class demo {
 
     }
 
-    private void processThree() throws IOException {
+    public void processThree() throws IOException {
 
         Stream<Map<String, Map<String, Map<String, String>>>> tagMap1 = Stream.of(tagMap);
 
@@ -134,7 +132,6 @@ public class demo {
             writer.newLine();
             writer.flush();
         }
-
     }
 
     /**
@@ -142,7 +139,7 @@ public class demo {
      * @Param: [keySet, storeName]
      * @return： java.util.List<java.lang.String> keySet中所有符合条件的key
      */
-    private List<String> matchKey(Set<String> keySet, String storeName) {
+    public List<String> matchKey(Set<String> keySet, String storeName) {
         List<String> keys = new ArrayList<>();
         for (String s : keySet) {
             if (!s.isEmpty() && storeName.contains(s)) {
@@ -158,21 +155,26 @@ public class demo {
      * @Param: [keys1：关键字1的列表, storeName]
      * @return： java.lang.String 符合条件的标签
      */
-    private String matchTag(List<String> keys1, String storeName) {
-        String[] keys = {"", "", ""};
+    public String matchTag(List<String> keys1, String storeName) {
+        String[] keys = {"", ""};
         for (String k1 : keys1) {
-            keys[0] = k1;
-            List<String> keys2 = matchKey(tagMap.get(keys[0]).keySet(), storeName);
+            List<String> keys2 = matchKey(tagMap.get(k1).keySet(), storeName);
             if (keys2.isEmpty()) continue;
             for (String k2 : keys2) {
-                keys[1] = k2;
-                List<String> keys3 = matchKey(tagMap.get(keys[0]).get(keys[1]).keySet(), storeName);
+                List<String> keys3 = matchKey(tagMap.get(k1).get(k2).keySet(), storeName);
                 if (!keys3.isEmpty()) {
-                    return tagMap.get(keys[0]).get(keys[1]).get(keys[2]);//三个关键字都匹配到了，直接返回
+                    return tagMap.get(k1).get(k2).get(keys3.get(0));//三个关键字都匹配到了，直接返回
                 }
+                if(keys[1].isEmpty())keys[1] = k2;
             }
+            if(keys[0].isEmpty())keys[0] = k1;
         }
-        if (tagMap.get(keys[0]).get(keys[1]) != null) return tagMap.get(keys[0]).get(keys[1]).get(keys[2]);//前两个关键字都匹配到了
+        if(keys[0].isEmpty())keys[0] = keys1.get(0);//只符合一个关键字
+        if (tagMap.get(keys[0]).get(keys[1]) != null) return tagMap.get(keys[0]).get(keys[1]).get("");//前两个关键字都匹配到了  或  匹配到第一个关键字
         return "";//如果关键字2没有匹配上,并且在tagMap中不存在,说明没有符合条件的标签；
+    }
+
+    public Map<String, Map<String, Map<String, String>>> getTagMap() {
+        return tagMap;
     }
 }
